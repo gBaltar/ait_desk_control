@@ -158,16 +158,7 @@ class _AITScreenState extends State<AITScreen> {
   // Rainbow effect variables
   bool _rainbowActive = false;
   Timer? _rainbowTimer;
-  int _rainbowColorIndex = 0;
-  final List<List<int>> _rainbowColors = [
-    [255, 0, 0],     // Red
-    [255, 127, 0],   // Orange
-    [255, 255, 0],   // Yellow
-    [0, 255, 0],     // Green
-    [0, 0, 255],     // Blue
-    [75, 0, 130],    // Indigo
-    [148, 0, 211],   // Violet
-  ];
+  double _rainbowHue = 0.0; // Hue in degrees (0-360)
 
   int _selectedPlaneIndex = 0;
   late final List<_ControlPlane> _planes = [
@@ -247,9 +238,8 @@ class _AITScreenState extends State<AITScreen> {
   void _startRainbow() {
     if (_rainbowActive) return;
     setState(() => _rainbowActive = true);
-    _rainbowColorIndex = 0;
-    // Use 500ms update frequency to account for BLE communication latency
-    _rainbowTimer = Timer.periodic(Duration(milliseconds: 500), (_) => _cycleRainbowColor());
+    // Use 400ms update frequency to account for BLE communication latency
+    _rainbowTimer = Timer.periodic(Duration(milliseconds: 400), (_) => _cycleRainbowColor());
   }
 
   void _stopRainbow() {
@@ -261,13 +251,21 @@ class _AITScreenState extends State<AITScreen> {
 
   void _cycleRainbowColor() {
     if (!_rainbowActive) return;
-    final color = _rainbowColors[_rainbowColorIndex];
-    _rainbowColorIndex = (_rainbowColorIndex + 1) % _rainbowColors.length;
+
+    // Convert HSV to RGB using Flutter's built-in HSVColor
+    final hsvColor = HSVColor.fromAHSV(1.0, _rainbowHue, 1.0, 1.0); // Alpha=1.0, Hue, Saturation=1.0, Value=1.0
+    final rgbColor = hsvColor.toColor();
+
+    // Update hue for next cycle (increment by 10 degrees for smooth transition)
+    _rainbowHue = (_rainbowHue + 1.0) % 360.0;
+
+    // Convert to device scale (0-100) and clamp
     setState(() {
-      _rgb_r[0] = (color[0] / 255 * 100).round().clamp(_rgb_r[1], _rgb_r[2]);
-      _rgb_g[0] = (color[1] / 255 * 100).round().clamp(_rgb_g[1], _rgb_g[2]);
-      _rgb_b[0] = (color[2] / 255 * 100).round().clamp(_rgb_b[1], _rgb_b[2]);
+      _rgb_r[0] = ((rgbColor.red / 255.0) * 100.0).round().clamp(_rgb_r[1], _rgb_r[2]);
+      _rgb_g[0] = ((rgbColor.green / 255.0) * 100.0).round().clamp(_rgb_g[1], _rgb_g[2]);
+      _rgb_b[0] = ((rgbColor.blue / 255.0) * 100.0).round().clamp(_rgb_b[1], _rgb_b[2]);
     });
+
     _sendControlCommand('set_rgb_r', _rgb_r[0]);
   }
 
