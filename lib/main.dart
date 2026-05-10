@@ -191,6 +191,7 @@ class _AITScreenState extends State<AITScreen> {
       _ControlItem('Current 1', _current_1, 'get_current'),
       _ControlItem('Current 2', _current_2, 'get_current'),
     ]),
+    _ControlPlane('Terminal', []), // Empty controls list since this plane shows logs
   ];
 
   @override
@@ -228,11 +229,13 @@ class _AITScreenState extends State<AITScreen> {
 
   void _addLog(String message) {
     setState(() => _logs.add(message));
-    _logScroller.animateTo(
-      _logScroller.position.maxScrollExtent,
-      duration: Duration(milliseconds: 300),
-      curve: Curves.easeOut,
-    );
+    if (_selectedPlaneIndex == 4) {
+      _logScroller.animateTo(
+        _logScroller.position.maxScrollExtent,
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   void _startRainbow() {
@@ -526,8 +529,8 @@ class _AITScreenState extends State<AITScreen> {
       else if (normalized == 'wellness_bt') {
         debugPrint("Received wellness button event");
       } else {
-      debugPrint("Received non-control message");
-    }
+        debugPrint("Received non-control message");
+      }
     }
   }
 
@@ -547,13 +550,13 @@ class _AITScreenState extends State<AITScreen> {
           );
         }),
       ),
-    );
+      );
   }
 
   Widget _buildPlaneControls() {
     final plane = _planes[_selectedPlaneIndex];
     final controls = plane.controls
-        .map((item) => _buildAudioSlider(item.label, item.value, (value) => _sendControlCommand(item.commandName, value)))
+        .map((item) => _buildControlSlider(item.label, item.value, (value) => _sendControlCommand(item.commandName, value)))
         .toList();
     
     // Add rainbow button for Lights plane
@@ -586,11 +589,37 @@ class _AITScreenState extends State<AITScreen> {
           ),
         ),
       );
+    } else if (_selectedPlaneIndex == 4) { // Audio plane index
+      controls.add(
+            Expanded(
+              child: ListView.builder(
+                controller: _logScroller,
+                itemCount: _logs.length,
+                itemBuilder: (c, i) => Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Text(_logs[i], style: TextStyle(fontFamily: 'monospace')),
+                ),
+              ),
+            )
+      );
+      controls.add(
+            Padding(
+              padding: EdgeInsets.all(8),
+              child: Row(
+                children: [
+                  Expanded(child: TextField(controller: _controller, decoration: InputDecoration(hintText: "e.g. get_height|#\\n"))),
+                  IconButton(icon: Icon(Icons.send), onPressed: () => sendCommand(_controller.text)),
+                ],
+              ),
+            )
+      );
     }
     
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: controls,
+    return Expanded(
+       child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: controls
+       )
     );
   }
   
@@ -598,42 +627,22 @@ class _AITScreenState extends State<AITScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text("Terminal")),
-      body: Column(
-        children: [
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      body:
+        Padding(
+          padding: EdgeInsets.all(16),
+          child:
+            Column(
               children: [
                 _buildPlaneSelector(),
                 SizedBox(height: 10),
                 _buildPlaneControls(),
               ],
             ),
-          ),
-          Expanded(child: ListView.builder(
-            controller: _logScroller,
-            itemCount: _logs.length,
-            itemBuilder: (c, i) => Padding(
-              padding: EdgeInsets.all(8),
-              child: Text(_logs[i], style: TextStyle(fontFamily: 'monospace')),
-            ),
-          )),
-          Padding(
-            padding: EdgeInsets.all(8),
-            child: Row(
-              children: [
-                Expanded(child: TextField(controller: _controller, decoration: InputDecoration(hintText: "e.g. get_height|#\\n"))),
-                IconButton(icon: Icon(Icons.send), onPressed: () => sendCommand(_controller.text)),
-              ],
-            ),
-          )
-        ],
-      ),
-    );
+        ),
+      );
   }
 
-  Widget _buildAudioSlider(String label, List<int> value, ValueChanged<int> onChanged) {
+  Widget _buildControlSlider(String label, List<int> value, ValueChanged<int> onChanged) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Column(
