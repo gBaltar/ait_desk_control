@@ -249,6 +249,23 @@ class _AITScreenState extends State<AITScreen> {
     _rainbowTimer = null;
   }
 
+  void _turnOffLights() {
+    // Stop rainbow effect if active
+    if (_rainbowActive) {
+      _stopRainbow();
+    }
+
+    // Set all RGB values to 0
+    setState(() {
+      _rgb_r[0] = 0;
+      _rgb_g[0] = 0;
+      _rgb_b[0] = 0;
+    });
+
+    // Send commands to turn off lights
+    _sendControlCommand('set_rgb_r', 0);
+  }
+
   void _cycleRainbowColor() {
     if (!_rainbowActive) return;
 
@@ -550,6 +567,20 @@ class _AITScreenState extends State<AITScreen> {
             label: Text(_rainbowActive ? 'Stop Rainbow' : 'Start Rainbow'),
             style: ElevatedButton.styleFrom(
               backgroundColor: _rainbowActive ? Colors.orange : Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ),
+      );
+      controls.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: ElevatedButton.icon(
+            onPressed: _turnOffLights,
+            icon: Icon(Icons.lightbulb_outline),
+            label: Text('Turn Off Lights'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.grey[800],
               foregroundColor: Colors.white,
             ),
           ),
