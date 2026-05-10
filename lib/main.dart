@@ -155,6 +155,20 @@ class _AITScreenState extends State<AITScreen> {
   List<int> _current_1 = [0, 0, 1000];
   List<int> _current_2 = [0, 0, 1000];
 
+  // Rainbow effect variables
+  bool _rainbowActive = false;
+  Timer? _rainbowTimer;
+  int _rainbowColorIndex = 0;
+  final List<List<int>> _rainbowColors = [
+    [255, 0, 0],     // Red
+    [255, 127, 0],   // Orange
+    [255, 255, 0],   // Yellow
+    [0, 255, 0],     // Green
+    [0, 0, 255],     // Blue
+    [75, 0, 130],    // Indigo
+    [148, 0, 211],   // Violet
+  ];
+
   int _selectedPlaneIndex = 0;
   late final List<_ControlPlane> _planes = [
     _ControlPlane('Audio', [
@@ -216,6 +230,7 @@ class _AITScreenState extends State<AITScreen> {
     _logScroller.dispose();
     _connectionSubscription.cancel();
     _lastValueSubscription?.cancel();
+    _rainbowTimer?.cancel();
     widget.device.disconnect();
     super.dispose();
   }
@@ -227,6 +242,33 @@ class _AITScreenState extends State<AITScreen> {
       duration: Duration(milliseconds: 300),
       curve: Curves.easeOut,
     );
+  }
+
+  void _startRainbow() {
+    if (_rainbowActive) return;
+    setState(() => _rainbowActive = true);
+    _rainbowColorIndex = 0;
+    // Use 500ms update frequency to account for BLE communication latency
+    _rainbowTimer = Timer.periodic(Duration(milliseconds: 500), (_) => _cycleRainbowColor());
+  }
+
+  void _stopRainbow() {
+    if (!_rainbowActive) return;
+    setState(() => _rainbowActive = false);
+    _rainbowTimer?.cancel();
+    _rainbowTimer = null;
+  }
+
+  void _cycleRainbowColor() {
+    if (!_rainbowActive) return;
+    final color = _rainbowColors[_rainbowColorIndex];
+    _rainbowColorIndex = (_rainbowColorIndex + 1) % _rainbowColors.length;
+    setState(() {
+      _rgb_r[0] = (color[0] / 255 * 100).round().clamp(_rgb_r[1], _rgb_r[2]);
+      _rgb_g[0] = (color[1] / 255 * 100).round().clamp(_rgb_g[1], _rgb_g[2]);
+      _rgb_b[0] = (color[2] / 255 * 100).round().clamp(_rgb_b[1], _rgb_b[2]);
+    });
+    _sendControlCommand('set_rgb_r', _rgb_r[0]);
   }
 
   Future<void> _onDiscoverServices() async {
@@ -287,7 +329,6 @@ class _AITScreenState extends State<AITScreen> {
     
     try {
       List<int> bytes = utf8.encode(input);
-      
       // Determine write type automatically or pick one
       await char_write!.write(bytes, withoutResponse: char_write!.properties.writeWithoutResponse);
       _addLog("TX: $input");
@@ -496,11 +537,31 @@ class _AITScreenState extends State<AITScreen> {
 
   Widget _buildPlaneControls() {
     final plane = _planes[_selectedPlaneIndex];
+    final controls = plane.controls
+        .map((item) => _buildAudioSlider(item.label, item.value, (value) => _sendControlCommand(item.commandName, value)))
+        .toList();
+    
+    // Add rainbow button for Lights plane
+    if (_selectedPlaneIndex == 1) { // Lights plane index
+      controls.add(
+        Padding(
+          padding: const EdgeInsets.only(top: 12, bottom: 6),
+          child: ElevatedButton.icon(
+            onPressed: _rainbowActive ? _stopRainbow : _startRainbow,
+            icon: Icon(_rainbowActive ? Icons.stop : Icons.play_arrow),
+            label: Text(_rainbowActive ? 'Stop Rainbow' : 'Start Rainbow'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _rainbowActive ? Colors.orange : Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ),
+      );
+    }
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: plane.controls
-          .map((item) => _buildAudioSlider(item.label, item.value, (value) => _sendControlCommand(item.commandName, value)))
-          .toList(),
+      children: controls,
     );
   }
   
