@@ -148,8 +148,12 @@ class _AITScreenState extends State<AITScreen> {
   List<int> _height = [0, 0, 547];
   
   List<int> _airlim = [500, 0, 1000];
-  List<int> _air = [500, 0, 1000];
-  List<int> _current = [0, -1000, 1000];
+  List<int> _air_1 = [500, 0, 1000];
+  List<int> _air_2 = [500, 0, 1000];
+  List<int> _air_3 = [500, 0, 1000];
+  List<int> _air_4 = [500, 0, 1000];
+  List<int> _current_1 = [0, 0, 1000];
+  List<int> _current_2 = [0, 0, 1000];
 
   int _selectedPlaneIndex = 0;
   late final List<_ControlPlane> _planes = [
@@ -167,7 +171,7 @@ class _AITScreenState extends State<AITScreen> {
     ]),
     _ControlPlane('Motion', [
       _ControlItem('Drawer', _drawer, 'set_drawer'),
-      _ControlItem('Height', _height, 'set_height'),
+      _ControlItem('Height', _height, 'get_height'),
       _ControlItem('Move', _move, 'set_move'),
       _ControlItem('Preset 1', _preset_1, 'set_preset_1'),
       _ControlItem('Preset 2', _preset_2, 'set_preset_2'),
@@ -175,8 +179,12 @@ class _AITScreenState extends State<AITScreen> {
     ]),
     _ControlPlane('Sensors', [
       _ControlItem('Air Limit', _airlim, 'set_airlim'),
-      _ControlItem('Air', _air, 'get_air'),
-      _ControlItem('Current', _current, 'get_current'),
+      _ControlItem('Air 1', _air_1, 'get_air'),
+      _ControlItem('Air 2', _air_2, 'get_air'),
+      _ControlItem('Air 3', _air_3, 'get_air'),
+      _ControlItem('Air 4', _air_4, 'get_air'),
+      _ControlItem('Current 1', _current_1, 'get_current'),
+      _ControlItem('Current 2', _current_2, 'get_current'),
     ]),
   ];
 
@@ -311,7 +319,7 @@ class _AITScreenState extends State<AITScreen> {
         command = '$name|2#';
       }
     } else if (name == 'set_height') {
-      _height[0] = value;
+      //_height[0] = value;
     } else if (name == 'set_rgb_r') {
       _rgb_r[0] = value;
       command = 'set_rgb|${_rgb_r[0]}|${_rgb_g[0]}|${_rgb_b[0]}#';
@@ -404,7 +412,12 @@ class _AITScreenState extends State<AITScreen> {
         }
       } else if (parts.length == 3) {
         if (field == 'get_current') {
-          setState(() => _current[0] = parsedValue!.clamp(_current[1], _current[2]));
+          final p1 = int.tryParse(parts[1]);
+          final p2 = int.tryParse(parts[2]);
+          setState(() {
+            _current_1[0] = p1!.clamp(_current_1[1], _current_1[2]);
+            _current_2[0] = p2!.clamp(_current_2[1], _current_2[2]);
+          });
         }
       } else if (parts.length == 4) {
         final p1 = int.tryParse(parts[1]);
@@ -427,7 +440,16 @@ class _AITScreenState extends State<AITScreen> {
         }
       } else if (parts.length == 5) {
         if (field == 'get_air') {
-          setState(() => _air[0] = parsedValue!.clamp(_air[1], _air[2]));
+          final p1 = int.tryParse(parts[1]);
+          final p2 = int.tryParse(parts[2]);
+          final p3 = int.tryParse(parts[3]);
+          final p4 = int.tryParse(parts[4]);
+          setState(() {
+            _air_1[0] = p1!.clamp(_air_1[1], _air_1[2]);
+            _air_2[0] = p2!.clamp(_air_2[1], _air_2[2]);
+            _air_3[0] = p3!.clamp(_air_3[1], _air_3[2]);
+            _air_4[0] = p4!.clamp(_air_4[1], _air_4[2]);
+          });
         }
       }
     }
@@ -448,8 +470,8 @@ class _AITScreenState extends State<AITScreen> {
       else if (normalized == 'wellness_bt') {
         debugPrint("Received wellness button event");
       } else {
-        debugPrint("Received non-control message");
-      }
+      debugPrint("Received non-control message");
+    }
     }
   }
 
