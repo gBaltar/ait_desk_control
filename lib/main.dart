@@ -157,7 +157,6 @@ class _AITScreenState extends State<AITScreen> {
 
   // Rainbow effect variables
   bool _rainbowActive = false;
-  Timer? _rainbowTimer;
   double _rainbowHue = 0.0; // Hue in degrees (0-360)
 
   int _selectedPlaneIndex = 0;
@@ -222,7 +221,6 @@ class _AITScreenState extends State<AITScreen> {
     _logScroller.dispose();
     _connectionSubscription.cancel();
     _lastValueSubscription?.cancel();
-    _rainbowTimer?.cancel();
     widget.device.disconnect();
     super.dispose();
   }
@@ -241,15 +239,12 @@ class _AITScreenState extends State<AITScreen> {
   void _startRainbow() {
     if (_rainbowActive) return;
     setState(() => _rainbowActive = true);
-    // Use 400ms update frequency to account for BLE communication latency
-    _rainbowTimer = Timer.periodic(Duration(milliseconds: 400), (_) => _cycleRainbowColor());
+    _cycleRainbowColor();
   }
 
   void _stopRainbow() {
     if (!_rainbowActive) return;
     setState(() => _rainbowActive = false);
-    _rainbowTimer?.cancel();
-    _rainbowTimer = null;
   }
 
   void _turnOffLights() {
@@ -281,9 +276,9 @@ class _AITScreenState extends State<AITScreen> {
 
     // Convert to device scale (0-100) and clamp
     setState(() {
-      _rgb_r[0] = ((rgbColor.red / 255.0) * 100.0).round().clamp(_rgb_r[1], _rgb_r[2]);
-      _rgb_g[0] = ((rgbColor.green / 255.0) * 100.0).round().clamp(_rgb_g[1], _rgb_g[2]);
-      _rgb_b[0] = ((rgbColor.blue / 255.0) * 100.0).round().clamp(_rgb_b[1], _rgb_b[2]);
+      _rgb_r[0] = (rgbColor.r * 100.0).round().clamp(_rgb_r[1], _rgb_r[2]);
+      _rgb_g[0] = (rgbColor.g * 100.0).round().clamp(_rgb_g[1], _rgb_g[2]);
+      _rgb_b[0] = (rgbColor.b * 100.0).round().clamp(_rgb_b[1], _rgb_b[2]);
     });
 
     _sendControlCommand('set_rgb_r', _rgb_r[0]);
@@ -437,7 +432,11 @@ class _AITScreenState extends State<AITScreen> {
           } else if (field == 'set_bass') {
             sendCommand('get_bass|#');
           } else if (field == 'set_rgb') {
-            sendCommand('get_rgb|#');
+            if (_rainbowActive) {
+              _cycleRainbowColor(); // Immediately update rainbow color  
+            } else { 
+              sendCommand('get_rgb|#');
+            }
           } else if (field == 'set_preset') {
             sendCommand('get_preset|#');
           } else if (field == 'set_drawer') {
@@ -626,7 +625,7 @@ class _AITScreenState extends State<AITScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Terminal")),
+      appBar: AppBar(title: Text("AiT Phantom 1 White")),
       body:
         Padding(
           padding: EdgeInsets.all(16),
